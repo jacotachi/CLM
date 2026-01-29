@@ -1,110 +1,126 @@
 # CLM Reader - Lecteur de Contrats et Factures
 
-Outil Python pour extraire automatiquement les informations structurees des contrats et factures au format PDF ou DOCX.
+Outil Python pour extraire automatiquement les informations structurees des contrats et factures au format PDF ou DOCX, avec **interface graphique Windows** et **suivi dans le temps**.
 
-## Fonctionnalites
+## Fonctionnalites principales
+
+- **Interface graphique Windows** (tkinter) - Pas de console requise
+- **Base de donnees SQLite** - Persistance locale des donnees
+- **Suivi des societes** - Vue centralisee par societe
+- **Evolution dans le temps** - Historique des factures par mois
+- **Liaison contrats/factures** - Suivi des paiements par contrat
+- **Detection automatique** - Identification automatique du type de document
+- **Export JSON** - Export des donnees pour integration
+
+## Informations extraites
 
 ### Pour les Contrats
-- **Societe Emettrice** : Identification de la societe qui emet le contrat
-- **Societe Receptrice** : Identification de la societe qui recoit le contrat
-- **Designation** : Titre ou reference du contrat
-- **Objet** : Description detaillee de l'objet du contrat
-- **Signataire** : Nom du signataire
-- **Prix HT** : Montant hors taxes
-- **Quantite** : Quantite concernee
-- **Engagement** : Duree ou nature de l'engagement
+| Champ | Description |
+|-------|-------------|
+| Societe Emettrice | Societe qui emet le contrat |
+| Societe Receptrice | Societe qui recoit le contrat |
+| Designation | Titre ou reference du contrat |
+| Objet | Description detaillee |
+| Signataire | Nom du signataire |
+| Prix HT | Montant hors taxes |
+| Quantite | Quantite concernee |
+| Engagement | Duree de l'engagement |
 
 ### Pour les Factures
-- **Societe Emettrice** : Emetteur de la facture
-- **Societe Destinatrice** : Destinataire de la facture
-- **Prix HT** : Montant hors taxes
-- **TVA** : Montant de la TVA
-- **Prix TTC** : Montant toutes taxes comprises
-- **Quantite** : Quantite facturee
-- **Date de Facture** : Date d'emission
-- **Date de Paiement Max** : Echeance de paiement
-- **Duree de Prestation** : Periode couverte
-- **Designation de la Prestation** : Description du service/produit
+| Champ | Description |
+|-------|-------------|
+| Societe Emettrice | Emetteur de la facture |
+| Societe Destinatrice | Destinataire |
+| Prix HT / TVA / TTC | Montants |
+| Quantite | Quantite facturee |
+| Date de Facture | Date d'emission |
+| Date de Paiement Max | Echeance |
+| Duree de Prestation | Periode couverte |
+| Designation | Description du service |
 
 ## Installation
 
 ### Installation basique
 ```bash
-pip install -e .
+pip install -r requirements.txt
 ```
 
-### Avec support OCR (pour PDF scannes)
+### Lancer l'application graphique
 ```bash
-pip install -e ".[ocr]"
+python run_app.py
 ```
 
-### Pour le developpement
+### Creer un executable Windows (.exe)
 ```bash
-pip install -e ".[dev]"
+python build_windows.py
 ```
+L'executable sera cree dans le dossier `dist/CLMReader.exe`
 
-## Utilisation
+## Utilisation de l'interface graphique
 
-### Ligne de commande
+### Vue principale
+- **Panel gauche** : Liste des societes avec nombre de contrats/factures et total
+- **Panel droit** : Onglets Contrats, Factures, Evolution
 
-#### Analyser un contrat
+### Import de documents
+1. Menu **Fichier > Importer Contrat** (Ctrl+O)
+2. Menu **Fichier > Importer Facture** (Ctrl+I)
+3. Menu **Fichier > Import Multiple** pour plusieurs fichiers
+
+### Suivi par societe
+1. Cliquer sur une societe dans la liste
+2. Voir les contrats et factures associes
+3. Onglet **Evolution** : historique mensuel des factures
+
+### Gestion des factures
+- **Marquer payee** : Indique qu'une facture a ete reglee
+- **Lier a un contrat** : Associe une facture a un contrat existant
+- Les factures en retard sont colorees en rouge
+
+### Raccourcis clavier
+| Raccourci | Action |
+|-----------|--------|
+| Ctrl+O | Importer un contrat |
+| Ctrl+I | Importer une facture |
+| F5 | Rafraichir les donnees |
+
+## Utilisation en ligne de commande
+
 ```bash
+# Analyser un contrat
 clm-reader contrat document.pdf
-clm-reader contrat document.pdf --format json
-clm-reader contrat document.pdf --output resultat.json
-```
 
-#### Analyser une facture
-```bash
-clm-reader facture facture.pdf
+# Analyser une facture
 clm-reader facture facture.pdf --format json
-clm-reader facture facture.pdf --output resultat.json
-```
 
-#### Traitement par lot
-```bash
-clm-reader batch ./documents/
-clm-reader batch ./documents/ --type contrat
+# Traitement par lot
 clm-reader batch ./documents/ --output resultats.json
-```
 
-#### Detection automatique du type
-```bash
+# Detection automatique
 clm-reader detect document.pdf
 ```
 
-### En Python
+## Utilisation en Python
 
 ```python
-from clm_reader import ContractParser, InvoiceParser
+from clm_reader import ContractParser, InvoiceParser, Database
 
-# Analyser un contrat
+# Analyser et sauvegarder un contrat
 parser = ContractParser()
 contrat = parser.parse("contrat.pdf")
-print(contrat.summary())
-print(f"Societe emettrice: {contrat.societe_emettrice}")
-print(f"Prix HT: {contrat.prix_ht} EUR")
 
-# Analyser une facture
-parser = InvoiceParser()
-facture = parser.parse("facture.pdf")
-print(facture.summary())
-print(f"Total TTC: {facture.prix_ttc} EUR")
-print(f"En retard: {facture.is_overdue()}")
+db = Database()
+db.save_contract(contrat)
 
-# Exporter en JSON
-import json
-print(json.dumps(contrat.to_dict(), indent=2, ensure_ascii=False))
+# Recuperer l'evolution d'une societe
+evolution = db.get_evolution_by_societe(societe_id=1)
+for mois in evolution:
+    print(f"{mois['mois']}: {mois['total_ttc']} EUR")
+
+# Factures impayees
+impayees = db.get_factures_impayees()
+print(f"{len(impayees)} factures en retard")
 ```
-
-## Options CLI
-
-| Option | Description |
-|--------|-------------|
-| `--format, -f` | Format de sortie: `table`, `json`, `text` |
-| `--ocr` | Activer l'OCR pour les PDF scannes |
-| `--output, -o` | Fichier de sortie JSON |
-| `--type, -t` | Type de document (pour batch): `contrat`, `facture`, `auto` |
 
 ## Structure du Projet
 
@@ -112,25 +128,38 @@ print(json.dumps(contrat.to_dict(), indent=2, ensure_ascii=False))
 clm_reader/
 ├── __init__.py
 ├── cli.py                    # Interface ligne de commande
+├── gui/
+│   ├── __init__.py
+│   └── main_window.py        # Interface graphique Windows
+├── database/
+│   ├── __init__.py
+│   └── db_manager.py         # Gestion base de donnees SQLite
 ├── models/
-│   ├── __init__.py
-│   ├── contract.py          # Modele de donnees Contrat
-│   └── invoice.py           # Modele de donnees Facture
+│   ├── contract.py           # Modele Contrat
+│   └── invoice.py            # Modele Facture
 ├── parsers/
-│   ├── __init__.py
-│   ├── contract_parser.py   # Parser de contrats
-│   └── invoice_parser.py    # Parser de factures
+│   ├── contract_parser.py    # Parser de contrats
+│   └── invoice_parser.py     # Parser de factures
 ├── extractors/
-│   ├── __init__.py
 │   └── document_extractor.py # Extraction PDF/DOCX
 └── utils/
-    ├── __init__.py
-    └── text_utils.py         # Utilitaires de traitement texte
+    └── text_utils.py         # Utilitaires texte
 ```
+
+## Base de donnees
+
+Les donnees sont stockees localement dans un fichier SQLite:
+- **Windows**: `%APPDATA%/CLMReader/clm_data.db`
+- **Linux/Mac**: `~/.clm_reader/clm_data.db`
+
+### Tables
+- `societes` : Liste des societes
+- `contrats` : Contrats avec liens vers societes
+- `factures` : Factures avec liens vers societes et contrats
 
 ## Score de Confiance
 
-Chaque extraction inclut un score de confiance (0-100%) indiquant la qualite de l'extraction:
+Chaque extraction inclut un score de confiance (0-100%):
 - **80-100%** : Extraction fiable
 - **50-79%** : Extraction partielle, verification recommandee
 - **0-49%** : Document difficile a analyser
@@ -141,9 +170,10 @@ Chaque extraction inclut un score de confiance (0-100%) indiquant la qualite de 
 - `PyPDF2` : Lecture PDF (fallback)
 - `python-docx` : Lecture fichiers Word
 - `pydantic` : Validation des donnees
-- `click` : Interface CLI
-- `rich` : Affichage console
-- `python-dateutil` : Parsing de dates
+- `tkinter` : Interface graphique (inclus avec Python)
+- `sqlite3` : Base de donnees (inclus avec Python)
+- `click` + `rich` : Interface CLI
+- `pyinstaller` : Creation executable Windows
 
 ## Licence
 
