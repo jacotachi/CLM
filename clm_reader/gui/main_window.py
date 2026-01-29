@@ -559,16 +559,6 @@ class MainWindow:
             contrat = self.db.get_contrat(contrat_id)
 
             if contrat:
-                details = f"""Designation: {contrat['designation'] or 'N/A'}
-Emetteur: {contrat['societe_emettrice_nom'] or 'N/A'}
-Client: {contrat['societe_receptrice_nom'] or 'N/A'}
-Objet: {contrat['objet'] or 'N/A'}
-Signataire: {contrat['signataire'] or 'N/A'}
-Prix HT: {contrat['prix_ht']:.2f} EUR si contrat['prix_ht'] else 'N/A'}
-Engagement: {contrat['engagement'] or 'N/A'}
-Confiance: {contrat['confiance']}%"""
-
-                # Correction de la ligne Prix HT
                 prix_str = f"{contrat['prix_ht']:.2f} EUR" if contrat['prix_ht'] else 'N/A'
                 details = f"""Designation: {contrat['designation'] or 'N/A'}
 Emetteur: {contrat['societe_emettrice_nom'] or 'N/A'}
